@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>日程工作台 · 个人任务管理</title>
+<meta name="description" content="以日历形式管理工作、健康、生活、学习四大板块的常规清单与每日任务，并自动生成日报周报月报。" />
+<meta name="theme-color" content="#4f46e5" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="工作台" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4.5" width="18" height="16" rx="3.5"/><path d="M3 9.5h18M8 2.8v3.4M16 2.8v3.4"/><path d="M8.4 14.4l2.3 2.3 4.6-4.6"/>
+      </svg>
+    </span>
+    <div class="brand-text">
+      <strong>日程工作台</strong>
+      <small id="brandSub">工作 · 健康 · 生活 · 学习</small>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn ghost" id="btnRoutines" title="管理周期性常规清单">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.1l4 4-9.5 9.5-5 1 1-5z"/><path d="M20.5 13.5V19a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 19V6A2.5 2.5 0 0 1 5 3.5h5.6"/></svg>
+      <span>常规清单</span>
+    </button>
+    <button class="btn primary" id="btnReport" title="生成日报 / 周报 / 月报">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2.5H7A2.5 2.5 0 0 0 4.5 5v14A2.5 2.5 0 0 0 7 21.5h10a2.5 2.5 0 0 0 2.5-2.5V8z"/><path d="M14 2.5V8h5.5M8.5 13h7M8.5 17h4.5"/></svg>
+      <span>生成报告</span>
+    </button>
+    <button class="btn icon" id="btnSettings" title="设置与数据">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-.97 1.47V21a2 2 0 1 1-4 0v-.11a1.6 1.6 0 0 0-1.05-1.47 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-.97H3a2 2 0 1 1 0-4h.11A1.6 1.6 0 0 0 4.6 9.4a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H9a1.6 1.6 0 0 0 .97-1.47V3a2 2 0 1 1 4 0v.11a1.6 1.6 0 0 0 .97 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V9a1.6 1.6 0 0 0 1.47.97H21a2 2 0 1 1 0 4h-.11a1.6 1.6 0 0 0-1.47.97z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ============ 日历面板 ============ -->
+  <section class="panel calendar-panel" id="viewCalendar">
+    <div class="cal-head">
+      <button class="nav-btn" id="prevMonth" aria-label="上个月">‹</button>
+      <div class="cal-title">
+        <h2 id="calTitle">—</h2>
+        <button class="today-btn" id="btnToday">回到今天</button>
+      </div>
+      <button class="nav-btn" id="nextMonth" aria-label="下个月">›</button>
+    </div>
+
+    <div class="weekdays">
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="wk">六</span><span class="wk">日</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+
+    <div class="legend">
+      <span class="lg" data-c="work"><i></i>工作</span>
+      <span class="lg" data-c="health"><i></i>健康</span>
+      <span class="lg" data-c="life"><i></i>生活</span>
+      <span class="lg" data-c="study"><i></i>学习</span>
+    </div>
+
+    <div class="month-stats" id="monthStats"></div>
+  </section>
+
+  <!-- ============ 当日面板 ============ -->
+  <section class="panel day-panel" id="viewDay">
+    <div class="day-head">
+      <div class="day-head-left">
+        <h2 id="dayTitle">—</h2>
+        <p id="daySub" class="muted">—</p>
+      </div>
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 44 44">
+          <circle class="ring-bg" cx="22" cy="22" r="18"></circle>
+          <circle class="ring-fg" id="ringFg" cx="22" cy="22" r="18"></circle>
+        </svg>
+        <span class="ring-num" id="ringNum">0%</span>
+      </div>
+    </div>
+
+    <div class="chips" id="catChips">
+      <button class="chip active" data-cat="all">全部</button>
+      <button class="chip" data-cat="work">工作</button>
+      <button class="chip" data-cat="health">健康</button>
+      <button class="chip" data-cat="life">生活</button>
+      <button class="chip" data-cat="study">学习</button>
+    </div>
+
+    <form class="add-row" id="addForm" autocomplete="off">
+      <select id="addCat" aria-label="板块">
+        <option value="work">工作</option>
+        <option value="health">健康</option>
+        <option value="life">生活</option>
+        <option value="study">学习</option>
+      </select>
+      <input id="addTitle" type="text" placeholder="添加当天任务，回车即可…" maxlength="80" />
+      <input id="addDue" type="time" class="add-due" title="目标完成时间（可选）" />
+      <button class="btn primary sm" type="submit">添加</button>
+    </form>
+
+    <div class="day-list" id="dayList"></div>
+  </section>
+</main>
+
+<nav class="mobile-tabs">
+  <button class="tab active" data-view="calendar">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.8v3.4M16 2.8v3.4"/></svg>
+    <span>日历</span>
+  </button>
+  <button class="tab" data-view="day">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6.5h16M4 12h16M4 17.5h10"/></svg>
+    <span>今日</span>
+  </button>
+  <button class="tab" data-view="routines">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5l2 2 3.5-3.5M3.5 13l2 2 3.5-3.5M3.5 19.5l2 2 3.5-3.5M13 6.5h7.5M13 13h7.5M13 19.5h7.5"/></svg>
+    <span>常规</span>
+  </button>
+  <button class="tab" data-view="report">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>
+    <span>报告</span>
+  </button>
+</nav>
+
+<!-- ============ 常规清单弹窗 ============ -->
+<div class="modal" id="modalRoutines" hidden>
+  <div class="modal-mask" data-close></div>
+  <div class="modal-box lg">
+    <div class="modal-head">
+      <h3>周期性常规清单</h3>
+      <button class="btn icon" data-close aria-label="关闭">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint">在这里定义「每天/每周/每月」都要做的事，日历里的每一天会自动带上它们，勾选即完成。</p>
+
+      <form class="routine-form" id="routineForm">
+        <input type="hidden" id="rId" />
+        <div class="rf-row">
+          <input id="rTitle" type="text" placeholder="常规名称，例如：晨间 15 分钟规划" maxlength="60" required />
+          <select id="rCat">
+            <option value="work">工作</option>
+            <option value="health">健康</option>
+            <option value="life">生活</option>
+            <option value="study">学习</option>
+          </select>
+        </div>
+        <div class="rf-row">
+          <select id="rType">
+            <option value="daily">每天</option>
+            <option value="weekly">每周指定日</option>
+            <option value="monthly">每月指定日</option>
+            <option value="interval">每隔 N 天</option>
+          </select>
+          <div class="rf-detail" id="rWeekly" hidden>
+            <label class="wd"><input type="checkbox" value="1" /><span>一</span></label>
+            <label class="wd"><input type="checkbox" value="2" /><span>二</span></label>
+            <label class="wd"><input type="checkbox" value="3" /><span>三</span></label>
+            <label class="wd"><input type="checkbox" value="4" /><span>四</span></label>
+            <label class="wd"><input type="checkbox" value="5" /><span>五</span></label>
+            <label class="wd"><input type="checkbox" value="6" /><span>六</span></label>
+            <label class="wd"><input type="checkbox" value="0" /><span>日</span></label>
+          </div>
+          <div class="rf-detail" id="rMonthly" hidden>
+            <input id="rDates" type="text" placeholder="每月几号，逗号分隔：1,15" />
+          </div>
+          <div class="rf-detail" id="rInterval" hidden>
+            <span class="inline">每隔</span><input id="rEvery" type="number" min="2" max="60" value="2" /><span class="inline">天，从</span>
+            <input id="rStart" type="date" />
+          </div>
+        </div>
+        <div class="rf-row end">
+          <button type="button" class="btn ghost sm" id="rCancel" hidden>取消编辑</button>
+          <button type="submit" class="btn primary sm" id="rSubmit">添加常规</button>
+        </div>
+      </form>
+
+      <div class="routine-list" id="routineList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 报告弹窗 ============ -->
+<div class="modal" id="modalReport" hidden>
+  <div class="modal-mask" data-close></div>
+  <div class="modal-box lg">
+    <div class="modal-head">
+      <h3>生成报告</h3>
+      <button class="btn icon" data-close aria-label="关闭">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="report-bar">
+        <div class="seg" id="repSeg">
+          <button class="seg-btn active" data-r="day">日报</button>
+          <button class="seg-btn" data-r="week">周报</button>
+          <button class="seg-btn" data-r="month">月报</button>
+          <button class="seg-btn" data-r="custom">自定义</button>
+        </div>
+        <span class="range-label" id="repRange">—</span>
+        <label class="ai-toggle" title="需先在设置里填好接口信息">
+          <input type="checkbox" id="repAI" /> <span>用 AI 润色成文</span>
+        </label>
+        <button class="btn primary sm" id="btnGenerate">生成</button>
+      </div>
+
+      <div class="rep-date" id="repDate">
+        <div class="rd-row" data-mode="day">
+          <label class="rd-label">日期</label>
+          <input type="date" id="repDay" />
+        </div>
+        <div class="rd-row" data-mode="week">
+          <label class="rd-label">所在周（取该周）</label>
+          <input type="date" id="repWeekDay" />
+        </div>
+        <div class="rd-row" data-mode="month">
+          <label class="rd-label">月份</label>
+          <input type="month" id="repMonth" />
+        </div>
+        <div class="rd-row" data-mode="custom">
+          <label class="rd-label">起止</label>
+          <input type="date" id="repStart" /><span class="rd-tilde">~</span><input type="date" id="repEnd" />
+        </div>
+      </div>
+
+      <div class="cat-picker" id="catPicker">
+        <span class="cp-label">包含板块</span>
+        <label class="cp" data-c="work"><input type="checkbox" value="work" checked /><span>工作</span></label>
+        <label class="cp" data-c="health"><input type="checkbox" value="health" checked /><span>健康</span></label>
+        <label class="cp" data-c="life"><input type="checkbox" value="life" checked /><span>生活</span></label>
+        <label class="cp" data-c="study"><input type="checkbox" value="study" checked /><span>学习</span></label>
+        <button type="button" class="cp-all" id="cpAll">全选</button>
+      </div>
+
+      <div class="report-out" id="reportOut">
+        <div class="empty">选择类型后点「生成」，会基于你的勾选记录自动汇总。</div>
+      </div>
+      <div class="report-actions">
+        <button class="btn ghost sm" id="btnCopy">复制 Markdown</button>
+        <button class="btn ghost sm" id="btnDownload">下载 .md</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 设置弹窗 ============ -->
+<div class="modal" id="modalSettings" hidden>
+  <div class="modal-mask" data-close></div>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>设置与数据</h3>
+      <button class="btn icon" data-close aria-label="关闭">✕</button>
+    </div>
+    <div class="modal-body">
+      <h4 class="sec-title">AI 写报告（可选）</h4>
+      <p class="hint">不填也能用：系统内置本地汇总引擎，能直接产出结构完整的日报周报。填了这里，可以让大模型把数据润色成更像人写的文字。支持任意 OpenAI 兼容接口。</p>
+      <div class="form-grid">
+        <label>接口地址<input id="setEndpoint" type="text" placeholder="https://api.openai.com/v1/chat/completions" /></label>
+        <label>API Key<input id="setKey" type="password" placeholder="sk-..." /></label>
+        <label>模型<input id="setModel" type="text" placeholder="gpt-4o-mini" /></label>
+      </div>
+
+      <h4 class="sec-title">多端同步</h4>
+      <p class="hint">数据保存在你自己的设备里（不上传任何服务器）。换设备时导出 JSON，在另一台上导入即可。</p>
+      <div class="btn-row">
+        <button class="btn ghost sm" id="btnExport">导出数据</button>
+        <button class="btn ghost sm" id="btnImport">导入数据</button>
+        <input type="file" id="fileImport" accept="application/json" hidden />
+      </div>
+
+      <h4 class="sec-title danger-title">危险操作</h4>
+      <div class="btn-row">
+        <button class="btn danger sm" id="btnClear">清空全部数据</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="snooze-pop" id="snoozePop" hidden>
+  <div class="sp-title">顺延 / 设定完成时间</div>
+  <div class="sp-quick" id="spQuick">
+    <button type="button" data-act="tomorrow">明天</button>
+    <button type="button" data-act="dayafter">后天</button>
+    <button type="button" data-act="pick">选择日期…</button>
+  </div>
+  <div class="sp-row" id="spPick" hidden>
+    <input type="date" id="spDate" />
+    <button type="button" class="btn primary xs" data-act="confirmPick">确定</button>
+  </div>
+  <div class="sp-row" id="spTime">
+    <input type="time" id="spTimeInput" />
+    <button type="button" class="btn primary xs" data-act="setTime">指定时间</button>
+    <button type="button" class="btn ghost xs" data-act="clearTime">清除</button>
+  </div>
+  <button type="button" class="sp-cancel" id="spCancel">取消</button>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
