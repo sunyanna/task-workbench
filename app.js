@@ -141,7 +141,7 @@
       .filter(r => routineActiveOn(r, dateStr))
       .map(r => ({ id: r.id, title: r.title, cat: r.cat, kind: 'routine', done: !!checks[r.id] }));
     const ts = (state.tasks[dateStr] || [])
-      .map(t => ({ id: t.id, title: t.title, cat: t.cat, kind: 'task', done: !!t.done, from: t.from }));
+      .map(t => ({ id: t.id, title: t.title, cat: t.cat, kind: 'task', done: !!t.done, from: t.from, series: t.series, end: t.end }));
     return rs.concat(ts);
   }
 
@@ -180,6 +180,62 @@
   function noteOf(dateStr, cat) {
     const m = state.notes ? state.notes[dateStr] : undefined;
     return m && m[cat] ? m[cat] : '';
+  }
+  /* 取消某系列任务从指定日期起的所有重复（保留之前的） */
+  function truncateSeries(seriesId, fromDate) {
+    if (!seriesId) return;
+    let cnt = 0;
+    Object.keys(state.tasks).forEach(ds => {
+      if (ds < fromDate) return;
+      let changed = false;
+      state.tasks[ds] = (state.tasks[ds] || []).filter(t => {
+        if (t.series === seriesId) { cnt++; changed = true; return false; }
+        return true;
+      });
+      if (changed && !state.tasks[ds].length) delete state.tasks[ds];
+    });
+    save(); renderDay(); renderCalendar();
+    toast(`已取消后续 ${cnt} 条重复`);
+  }
+
+  /* 行内编辑任务文案 */
+  function startEdit(item, titleEl) {
+    if (!titleEl || !titleEl.parentNode) return;
+    const cur = item.title;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'item-edit-input';
+    input.value = cur;
+    input.maxLength = 120;
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+    let finished = false;
+    const commit = (doSave) => {
+      if (finished) return;
+      finished = true;
+      if (doSave) {
+        const v = input.value.trim();
+        if (v && v !== cur) {
+          if (item.kind === 'task') {
+            const t = (state.tasks[selDate] || []).find(x => x.id === item.id);
+            if (t) t.title = v;
+          } else {
+            const r = state.routines.find(x => x.id === item.id);
+            if (r) r.title = v;
+          }
+          save(); renderDay(); renderCalendar();
+          return;
+        }
+      }
+      renderDay();   // 还原（未改或按 Esc）
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', () => commit(true));
   }
   /* 把一条当日任务顺延到目标日期（从今天移除，加到目标日，保留板块/时间/顺延来源） */
   function snoozeTo(item, targetDate) {
@@ -372,6 +428,8 @@
         const t = document.createElement('div');
         t.className = 'item-title';
         t.textContent = item.title;
+        t.title = '双击修改文案';
+        t.addEventListener('dblclick', () => startEdit(item, t));
         main.appendChild(t);
 
         const meta = document.createElement('div');
@@ -400,6 +458,12 @@
             f.textContent = `顺延自 ${item.from.slice(5).replace('-', '/')}`;
             meta.appendChild(f);
           }
+          if (item.series) {
+            const sb = document.createElement('span');
+            sb.className = 'badge series';
+            sb.textContent = '🔁 多日·至 ' + item.end.slice(5).replace('-', '/');
+            meta.appendChild(sb);
+          }
         }
         const due = dueOf(item);
         if (due) {
@@ -411,6 +475,14 @@
         main.appendChild(meta);
         row.appendChild(main);
 
+        // 行内编辑文案
+        const ed = document.createElement('button');
+        ed.className = 'item-edit';
+        ed.title = '修改文案';
+        ed.textContent = '✎';
+        ed.addEventListener('click', e => { e.stopPropagation(); startEdit(item, t); });
+        row.appendChild(ed);
+
         if (!item.done) {
           const sz = document.createElement('button');
           sz.className = 'item-snooze';
@@ -419,11 +491,24 @@
           sz.addEventListener('click', e => { e.stopPropagation(); openSnooze(item, sz); });
           row.appendChild(sz);
         }
+        if (item.series && !item.done) {
+          const tr = document.createElement('button');
+          tr.className = 'item-trunc';
+          tr.title = '取消该任务后续所有日期';
+          tr.textContent = '✂';
+          tr.addEventListener('click', e => {
+            e.stopPropagation();
+            if (confirm(`取消「${item.title}」从 ${selDate.slice(5).replace('-', '/')} 起之后的所有重复？已勾选的日期不受影响。`)) {
+              truncateSeries(item.series, selDate);
+            }
+          });
+          row.appendChild(tr);
+        }
         if (item.kind === 'task') {
           const del = document.createElement('button');
           del.className = 'item-del';
           del.textContent = '✕';
-          del.title = '删除';
+          del.title = '删除这条';
           del.addEventListener('click', () => {
             state.tasks[selDate] = (state.tasks[selDate] || []).filter(x => x.id !== item.id);
             save(); renderDay(); renderCalendar();
@@ -934,19 +1019,44 @@
     renderDay();
   });
 
-  /* 添加当天任务 */
+  /* 切换时间范围时切换第二行：自定义显示起止日期 */
+  $('#addRange').addEventListener('change', () => {
+    const custom = $('#addRange').value === 'custom';
+    $('#addRow2').hidden = !custom;
+    if (custom) {
+      if (!$('#addRangeStart').value) $('#addRangeStart').value = selDate;
+      if (!$('#addRangeEnd').value) $('#addRangeEnd').value = addDays(selDate, 1);
+    }
+  });
+
+  /* 添加任务（支持长期需求：发布到一段时间内的每一天） */
   $('#addForm').addEventListener('submit', e => {
     e.preventDefault();
     const title = $('#addTitle').value.trim();
     if (!title) return;
-    state.tasks[selDate] = state.tasks[selDate] || [];
-    const due = $('#addDue').value || '';
-    const task = { id: uid(), title, cat: $('#addCat').value, done: false };
-    if (due) task.due = due;
-    state.tasks[selDate].push(task);
+    const cat = $('#addCat').value;
+    let end = selDate;
+    const rangeSel = $('#addRange').value;
+    if (rangeSel === 'custom') {
+      const s = $('#addRangeStart').value;
+      const v = $('#addRangeEnd').value;
+      if (!s || !v) { toast('请选择起止日期'); return; }
+      end = v < s ? s : v;       // 不允许早于起始日
+    } else {
+      const n = Number(rangeSel) || 1;
+      if (n > 1) end = addDays(selDate, n - 1);
+    }
+    const days = rangeDays(selDate, end);
+    const series = days.length > 1 ? uid() : null;
+    days.forEach(ds => {
+      state.tasks[ds] = state.tasks[ds] || [];
+      const task = { id: uid(), title, cat, done: false };
+      if (series) { task.series = series; task.end = end; }
+      state.tasks[ds].push(task);
+    });
     $('#addTitle').value = '';
-    $('#addDue').value = '';
     save(); renderDay(); renderCalendar();
+    if (series) toast(`已发布「${title}」到 ${days.length} 天（至 ${end.slice(5).replace('-', '/')}）`);
   });
 
   /* 常规清单 */
