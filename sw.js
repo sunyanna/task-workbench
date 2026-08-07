@@ -1,5 +1,5 @@
 /* 离线缓存：安装即缓存核心资源，运行时网络优先回退缓存 */
-const CACHE = 'ptw-v9';
+const CACHE = 'ptw-v10';
 const ASSETS = [
   './',
   './index.html',
