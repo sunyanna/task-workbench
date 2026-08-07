@@ -95,15 +95,28 @@
     </div>
 
     <form class="add-row" id="addForm" autocomplete="off">
-      <select id="addCat" aria-label="板块">
-        <option value="work">工作</option>
-        <option value="health">健康</option>
-        <option value="life">生活</option>
-        <option value="study">学习</option>
-      </select>
-      <input id="addTitle" type="text" placeholder="添加当天任务，回车即可…" maxlength="80" />
-      <input id="addDue" type="time" class="add-due" title="目标完成时间（可选）" />
-      <button class="btn primary sm" type="submit">添加</button>
+      <div class="add-row-1">
+        <select id="addCat" aria-label="板块">
+          <option value="work">工作</option>
+          <option value="health">健康</option>
+          <option value="life">生活</option>
+          <option value="study">学习</option>
+        </select>
+        <input id="addTitle" type="text" placeholder="添加任务，回车即可…" maxlength="80" />
+        <select id="addRange" class="add-range" title="时间范围" aria-label="时间范围">
+          <option value="1">仅当天</option>
+          <option value="3">未来 3 天</option>
+          <option value="7">未来 7 天</option>
+          <option value="14">未来 14 天</option>
+          <option value="custom">自定义…</option>
+        </select>
+        <button class="btn primary sm" type="submit">添加</button>
+      </div>
+      <div class="add-row-2" id="addRow2" hidden>
+        <input id="addRangeStart" type="date" class="add-range-date" title="起始日期" />
+        <span class="add-range-sep">至</span>
+        <input id="addRangeEnd" type="date" class="add-range-date" title="截止日期" />
+      </div>
     </form>
 
     <div class="day-list" id="dayList"></div>
